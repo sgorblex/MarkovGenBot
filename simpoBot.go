@@ -2,11 +2,12 @@ package main
 
 // TODO:
 // !!! when we generated a word with no Followings and we have to generate more, (finish the sentence with . and) start again with ""
-// words that terminate a text could have "" as Following, and when that happens markov generates a . if it has to generate more
+// words that terminate a text could have "" as Following, and when that happens markov generates a . if it has to generate more. Or, even better, instead of generating n words it could generate a message, which ends when "" is next. Or might implement both functions.
 // markov should be populated per chat
 // only what is convenient to keep in memory should be kept, the rest goes on file/db
 // markov should be in its own package
 // functions that take a Folloing should instead be methods of Markov and take a string, which will then define the Following
+// check that it does not train itself
 
 import (
 	"bufio"
@@ -61,7 +62,12 @@ func sumOfProb(pref Following) uint {
 
 func (m Markov) genWord(pref Following) string {
 	var i, r uint
-	r = uint(rand.Uint64()) % sumOfProb(pref)
+	// to be fixed
+	sop := sumOfProb(pref)
+	if sop == 0 {
+		return "Failed. Fix this bug, bro."
+	}
+	r = uint(rand.Uint64()) % sop
 	for suff, prob := range pref {
 		i += prob
 		if i >= r {
@@ -112,7 +118,7 @@ func main() {
 		}
 		// this if condition is only for testing purposes and will be changed
 		if update.Message.IsCommand() && !m.IsEmpty() {
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, m.Generate(10))
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, m.Generate(200))
 			msg.ReplyToMessageID = update.Message.MessageID
 			bot.Send(msg)
 		} else {
