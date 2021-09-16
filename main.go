@@ -3,22 +3,33 @@ package main
 // TODO
 // actual commands
 // function for generating text of x words. When a sentence terminates (next = ""), add . and start again (prev = "")
-// markov should be populated per chat
 // only what is convenient to keep in memory should be kept, the rest goes on file/db
+// list of allowed chats
+// logging (with chat codes)
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"os/signal"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 
 	markov "github.com/SimpoLab/SimpoBot/markov"
 )
 
+const (
+	dataFileName   string = "data.json"
+	apiKeyFileName string = "api_key.txt"
+)
+
+type ChatID int64
+
 func getApiKey() string {
-	keyFile, err := os.Open("api_key.txt")
+	keyFile, err := os.Open(apiKeyFileName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -30,6 +41,41 @@ func getApiKey() string {
 	}
 	return sc.Text()
 }
+
+func gracefulExit(m map[ChatID]markov.Markov) {
+	fmt.Fprintf(os.Stderr, "\nexiting gracefully...\n")
+	jsonData, err := json.Marshal(m)
+	if err != nil {
+		log.Fatal(err)
+	}
+	file, err := os.OpenFile(dataFileName, os.O_CREATE|os.O_WRONLY, 0644)
+	defer file.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = file.Write(jsonData)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func markovsFromFile(filename string) (map[ChatID]markov.Markov, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+	var m map[ChatID]markov.Markov
+	err = json.Unmarshal(raw, &m)
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func main() {
 	bot, err := tgbotapi.NewBotAPI(getApiKey())
 	if err != nil {
@@ -38,17 +84,38 @@ func main() {
 	// bot.Debug = true
 
 	u := tgbotapi.NewUpdate(0)
-	// u.Timeout = 60
-	u.Timeout = 2
+	u.Timeout = 60
 	updates, err := bot.GetUpdatesChan(u)
 
-	fmt.Fprintln(os.Stderr, "bot started")
-	m := make(markov.Markov)
+	// markovs := make(markov.Markov)
+	var markovs map[ChatID]markov.Markov
+	if _, err := os.Stat(dataFileName); err == nil {
+		markovs, err = markovsFromFile(dataFileName)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		markovs = make(map[ChatID]markov.Markov)
+	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		gracefulExit(markovs)
+		os.Exit(0)
+	}()
+
 	for update := range updates {
 		if update.Message == nil {
 			continue
 		}
 		// this if condition is only for testing purposes and will be changed
+		var m markov.Markov
+		if markovs[ChatID(update.Message.Chat.ID)] == nil {
+			markovs[ChatID(update.Message.Chat.ID)] = make(markov.Markov)
+		}
+		m = markovs[ChatID(update.Message.Chat.ID)]
 		if !update.Message.IsCommand() {
 			m.Train(update.Message.Text)
 		} else {
