@@ -1,30 +1,37 @@
 package markov
 
-// TODO
-// see comments with TODO
-
 import (
-	"log"
 	"math/rand"
 	"strings"
+	"time"
+
+	assert "github.com/SimpoLab/SimpoBot/assert"
 )
 
 type Following map[string]uint
 type Markov map[string]Following
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 func (m Markov) IsEmpty() bool {
 	return len(m) == 0
 }
 
-func (m Markov) Populate(text string) {
-	prev := ""
-	for _, word := range strings.Fields(text) {
+func (m Markov) Train(text string) {
+	var prev, word string
+	for _, word = range strings.Fields(text) {
 		if m[prev] == nil {
 			m[prev] = make(Following)
 		}
 		m[prev][word]++
 		prev = word
 	}
+	if m[word] == nil {
+		m[word] = make(Following)
+	}
+	m[word][""]++
 }
 
 func (m Markov) sumOfProb(word string) uint {
@@ -35,42 +42,30 @@ func (m Markov) sumOfProb(word string) uint {
 	return i
 }
 
-func (m Markov) genWord(word string) string {
-	// TODO: fix this
-	sop := m.sumOfProb(word)
-	if sop == 0 {
-		return "Failed. Fix this bug, bro."
-	}
+func (m Markov) genWord(prev string) string {
+	sop := m.sumOfProb(prev)
+	assert.String(sop != 0, "no following weights to "+prev)
 	extracted := uint(rand.Uint64()) % sop
-	// TODO: check algorithm and condition
-	for suff, prob := range m[word] {
-		extracted -= prob
-		if extracted < 0 {
+	for suff, prob := range m[prev] {
+		if extracted < prob {
 			return suff
 		}
+		extracted -= prob
 	}
-	log.Panic("assertion error")
+	assert.String(false, "extracted number out of range")
 	return ""
 }
 
-func (m Markov) Generate(nWords int) string {
-	var (
-		res  string
-		r, j int
-		prev string
-	)
-	// TODO: make this selection vaguely coherent with the genWord one
-	r = rand.Intn(len(m))
-	for prev = range m {
-		if r >= j {
+func (m Markov) Generate() string {
+	var res, prev string
+	for {
+		word := m.genWord(prev)
+		if word == "" {
 			break
 		}
-		j++
-	}
-	for i := 0; i < nWords; i++ {
-		word := m.genWord(prev)
 		res += word + " "
 		prev = word
 	}
+	// return strings.Trim(res, " ")
 	return res
 }
