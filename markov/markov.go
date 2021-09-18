@@ -20,18 +20,18 @@ func (m Markov) IsEmpty() bool {
 }
 
 func (m Markov) Train(text string) {
-	var prev, word string
-	for _, word = range strings.Fields(text) {
+	var prev string
+	for _, word := range strings.Fields(text) {
 		if m[prev] == nil {
 			m[prev] = make(Following)
 		}
 		m[prev][word]++
-		prev = word
+		prev = strings.ToLower(word)
 	}
-	if m[word] == nil {
-		m[word] = make(Following)
+	if m[prev] == nil {
+		m[prev] = make(Following)
 	}
-	m[word][""]++
+	m[prev][""]++
 }
 
 func (m Markov) sumOfProb(word string) uint {
@@ -43,12 +43,13 @@ func (m Markov) sumOfProb(word string) uint {
 }
 
 func (m Markov) genWord(prev string) string {
-	sop := m.sumOfProb(prev)
-	assert.String(sop != 0, "no following weights to "+prev)
+	lowPrev := strings.ToLower(prev)
+	sop := m.sumOfProb(lowPrev)
+	assert.String(sop != 0, "no following weights to "+lowPrev)
 	extracted := uint(rand.Uint64()) % sop
-	for suff, prob := range m[prev] {
+	for word, prob := range m[lowPrev] {
 		if extracted < prob {
-			return suff
+			return word
 		}
 		extracted -= prob
 	}
