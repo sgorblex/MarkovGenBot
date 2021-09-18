@@ -6,6 +6,7 @@ package main
 // only what is convenient to keep in memory should be kept, the rest goes on file/db
 // list of allowed chats
 // logging (with chat codes)
+// cache of sum of probs
 
 import (
 	"bufio"
