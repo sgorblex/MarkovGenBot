@@ -119,7 +119,7 @@ func main() {
 		if !update.Message.IsCommand() {
 			m.Train(update.Message.Text)
 		} else {
-			if !m.IsEmpty() {
+			if update.Message.Command() == "generate" && !m.IsEmpty() {
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, m.Generate())
 				msg.ReplyToMessageID = update.Message.MessageID
 				bot.Send(msg)
