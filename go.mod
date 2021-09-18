@@ -1,4 +1,4 @@
-module github.com/SimpoLab/SimpoBot
+module github.com/SimpoLab/MarkovBot
 
 go 1.17
 

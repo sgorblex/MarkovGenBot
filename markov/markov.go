@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	assert "github.com/SimpoLab/SimpoBot/assert"
+	assert "github.com/SimpoLab/MarkovBot/assert"
 )
 
 type Following map[string]uint

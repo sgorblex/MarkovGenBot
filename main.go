@@ -18,7 +18,7 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 
-	markov "github.com/SimpoLab/SimpoBot/markov"
+	markov "github.com/SimpoLab/MarkovBot/markov"
 )
 
 const (
