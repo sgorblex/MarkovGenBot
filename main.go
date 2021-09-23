@@ -1,12 +1,13 @@
 package main
 
 // TODO
-// actual commands
 // function for generating text of x words. When a sentence terminates (next = ""), add . and start again (prev = "")
 // only what is convenient to keep in memory should be kept, the rest goes on file/db
 // list of allowed chats
 // logging (with chat codes)
 // cache of sum of probs
+// write to file every x minutes (protection from system crashes)
+// use database instead of json, or at least use a different file per chat
 
 import (
 	"bufio"
@@ -54,10 +55,11 @@ func gracefulExit(m map[ChatID]markov.Markov) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = file.Write(jsonData)
+	n, err := file.Write(jsonData)
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = file.Truncate(int64(n))
 }
 
 func markovsFromFile(filename string) (map[ChatID]markov.Markov, error) {
