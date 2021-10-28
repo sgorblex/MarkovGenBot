@@ -122,13 +122,16 @@ func main() {
 		m = markovs[ChatID(update.Message.Chat.ID)]
 		if !update.Message.IsCommand() {
 			m.Train(update.Message.Text)
-		} else {
-			if update.Message.Command() == "generate" && !m.IsEmpty() {
+			if update.Message.ReplyToMessage != nil && *update.Message.ReplyToMessage.From == bot.Self {
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, m.Generate())
 				msg.ReplyToMessageID = update.Message.MessageID
 				bot.Send(msg)
 			}
+		} else {
+			if update.Message.Command() == "generate" && !m.IsEmpty() {
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, m.Generate())
+				bot.Send(msg)
+			}
 		}
-
 	}
 }
