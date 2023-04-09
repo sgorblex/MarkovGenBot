@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func GracefulExit(tabs Tables) {
+func Persist(tabs Tables) {
 	os.MkdirAll(baseDataPath, 0755)
 	for cID, m := range tabs {
 		jsonData, err := json.Marshal(m)
