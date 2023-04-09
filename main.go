@@ -10,6 +10,7 @@ package main
 // use database instead of json, or at least use a different file per chat
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -18,27 +19,24 @@ import (
 	. "github.com/sgorblex/MarkovGenBot/backend"
 )
 
-const (
-	dataFilePath string = "data.json"
-)
-
 func main() {
-	markovs, err := MarkovsFromFile(dataFilePath)
-	if err != nil {
-		log.Fatal(err)
-	}
+	markovs := make(Tables)
 
 	// save training to disk and exit gracefully
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-c
-		GracefulExit(markovs, dataFilePath)
+		fmt.Fprintf(os.Stderr, "\nexiting gracefully...\n")
+		GracefulExit(markovs)
 		os.Exit(0)
 	}()
 
 	updates := GetUpdates()
 	for update := range updates {
-		ProcessUpdate(markovs, update)
+		err := ProcessUpdate(markovs, update)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 }
