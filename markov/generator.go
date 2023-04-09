@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	assert "github.com/SimpoLab/MarkovBot/assert"
+	assert "github.com/sgorblex/MarkovGenBot/assert"
 )
 
 type Following map[string]uint
@@ -67,6 +67,5 @@ func (m Markov) Generate() string {
 		res += word + " "
 		prev = word
 	}
-	// return strings.Trim(res, " ")
 	return res
 }
