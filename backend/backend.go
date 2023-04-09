@@ -13,8 +13,30 @@ import (
 )
 
 const (
-	baseDataPath string = "data"
+	baseDataPath   string = "data"
+	whitelistsPath string = "whitelist.json"
 )
+
+var whitelist []ChatID
+var useWhitelist bool
+
+func init() {
+	file, err := os.Open(whitelistsPath)
+	if err != nil {
+		log.Printf("Not using whitelist, reason: %v.\n", err)
+		return
+	}
+	raw, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = json.Unmarshal(raw, &whitelist)
+	if err != nil {
+		log.Panic(err)
+	}
+	log.Printf("Parsed whitelist: %v.\n", whitelist)
+	useWhitelist = true
+}
 
 type Tables map[ChatID]markov.Markov
 
@@ -66,11 +88,23 @@ func (t Tables) fetchOrCreate(cID ChatID) (markov.Markov, error) {
 	return m, nil
 }
 
+func isWhitelisted(cID ChatID) bool {
+	for _, candidate := range whitelist {
+		if cID == candidate {
+			return true
+		}
+	}
+	return false
+}
+
 func ProcessUpdate(markovs Tables, update tba.Update) error {
 	if update.Message == nil {
 		return nil
 	}
 	cID := ChatID(update.Message.Chat.ID)
+	if useWhitelist && !isWhitelisted(cID) {
+		return fmt.Errorf("Skipping update from chat %v as it's now whitelisted", cID)
+	}
 	m, err := markovs.fetchOrCreate(cID)
 	if err != nil {
 		return fmt.Errorf("Error with update on chat %v: %v.", cID, err)
