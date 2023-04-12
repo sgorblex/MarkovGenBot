@@ -7,9 +7,10 @@ import (
 	"strconv"
 )
 
-func Persist(tabs Tables) {
+func (tabs Tables) Persist() {
 	os.MkdirAll(baseDataPath, 0755)
-	for cID, m := range tabs {
+	for cID, tm := range tabs {
+		m := tm.mark
 		jsonData, err := json.Marshal(m)
 		if err != nil {
 			log.Fatal(err)

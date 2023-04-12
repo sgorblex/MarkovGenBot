@@ -7,14 +7,16 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	tba "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sgorblex/MarkovGenBot/markov"
 )
 
 const (
-	baseDataPath   string = "data"
-	whitelistsPath string = "whitelist.json"
+	baseDataPath   string        = "data"
+	whitelistsPath string        = "whitelist.json"
+	oldThreshold   time.Duration = 24 * time.Hour
 )
 
 var whitelist []ChatID
@@ -38,7 +40,11 @@ func init() {
 	useWhitelist = true
 }
 
-type Tables map[ChatID]markov.Markov
+type TimedMarkov struct {
+	access time.Time
+	mark   markov.Markov
+}
+type Tables map[ChatID]TimedMarkov
 
 func processMessage(m markov.Markov, update tba.Update) {
 	cID := ChatID(update.Message.Chat.ID)
@@ -60,16 +66,30 @@ func processCommand(m markov.Markov, update tba.Update) {
 	}
 }
 
+func (t Tables) UnloadOld() {
+	t.Persist()
+	// now is only requested once; might lose information since as of now the map is not locked
+	oldTime := time.Now().Add(-oldThreshold)
+	for k, v := range t {
+		if v.access.Before(oldTime) {
+			log.Printf("Table of chat %v unloaded since last access was on %v.\n", k, v.access)
+			delete(t, k)
+		}
+	}
+}
+
 func (t Tables) fetchOrCreate(cID ChatID) (markov.Markov, error) {
-	m, exists := t[cID]
+	tm, exists := t[cID]
 	if exists {
-		return m, nil
+		t[cID] = TimedMarkov{time.Now(), tm.mark}
+		return tm.mark, nil
 	}
 	filePath := baseDataPath + "/" + strconv.Itoa(int(cID)) + ".json"
 	if _, err := os.Stat(filePath); err != nil {
 		log.Printf("No memory for chat %v; creating new.\n", cID)
-		t[cID] = make(markov.Markov)
-		return t[cID], nil
+		m := make(markov.Markov)
+		t[cID] = TimedMarkov{time.Now(), m}
+		return m, nil
 	}
 	log.Printf("Found persistent memory for chat %v; unmarshaling.\n", cID)
 	file, err := os.Open(filePath)
@@ -80,11 +100,12 @@ func (t Tables) fetchOrCreate(cID ChatID) (markov.Markov, error) {
 	if err != nil {
 		return nil, err
 	}
+	m := make(markov.Markov)
 	err = json.Unmarshal(raw, &m)
 	if err != nil {
 		return nil, err
 	}
-	t[cID] = m
+	t[cID] = TimedMarkov{time.Now(), m}
 	return m, nil
 }
 

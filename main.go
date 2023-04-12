@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	persistTimer time.Duration = 600
+	persistTimer time.Duration = 600 * time.Second
+	unloadTimer  time.Duration = 6 * time.Hour
 )
 
 func main() {
@@ -23,18 +24,29 @@ func main() {
 	go func() {
 		<-c
 		log.Println("Exiting gracefully")
-		Persist(markovs)
+		markovs.Persist()
 		os.Exit(0)
 	}()
 
 	// periodically write tables to persistence
 	go func() {
-		ticker := time.NewTicker(persistTimer * time.Second)
+		ticker := time.NewTicker(persistTimer)
 		defer ticker.Stop()
 		for {
 			<-ticker.C
 			log.Println("Executing persistence routine")
-			Persist(markovs)
+			markovs.Persist()
+		}
+	}()
+
+	// periodically unload unused tables
+	go func() {
+		ticker := time.NewTicker(unloadTimer)
+		defer ticker.Stop()
+		for {
+			<-ticker.C
+			log.Println("Executing unload routine")
+			markovs.UnloadOld()
 		}
 	}()
 
