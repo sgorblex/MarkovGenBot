@@ -50,7 +50,7 @@ func processMessage(m markov.Markov, update tba.Update) {
 	cID := ChatID(update.Message.Chat.ID)
 	log.Printf("Training for chat %v.\n", cID)
 	m.Train(update.Message.Text)
-	if update.Message.ReplyToMessage != nil && *update.Message.ReplyToMessage.From == Bot.Self {
+	if update.Message.ReplyToMessage != nil && update.Message.ReplyToMessage.From.ID == Bot.Self.ID {
 		log.Printf("Generating for chat %v.\n", cID)
 		msg := tba.NewMessage(int64(cID), m.Generate())
 		msg.ReplyToMessageID = update.Message.MessageID
