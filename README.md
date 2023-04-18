@@ -47,3 +47,8 @@ You can restrict chats which can interact with the bot by putting a json list of
 If the file `whitelist.json` does not exist, the bot will operate in no-whitelist mode, i.e. will allow conversation with any chat.
 
 You will find persistent data in `data/<chatID>.json`, for each chat ID with which the bot interacted.
+
+
+
+## License
+[MIT](LICENSE)
